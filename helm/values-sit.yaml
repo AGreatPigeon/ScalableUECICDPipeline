@@ -1,0 +1,59 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/your-org/unreal-devops
+  tag: sit
+  pullPolicy: Always
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+service:
+  type: ClusterIP
+  port: 80
+
+env:
+  LOG_LEVEL: "info"
+
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "80"
+
+grafana:
+  dashboard:
+    enabled: true
+    folder: "SIT"
+    annotations:
+      team: "qa"
+    json: |
+      {
+        "title": "Unreal DevOps SIT Dashboard",
+        "panels": [
+          {
+            "type": "graph",
+            "title": "CPU Usage",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{image=~\"ghcr.io/your-org/unreal-devops:.*\"}[5m])",
+                "legendFormat": "{{container}}"
+              }
+            ]
+          },
+          {
+            "type": "graph",
+            "title": "Memory Usage",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{image=~\"ghcr.io/your-org/unreal-devops:.*\"}",
+                "legendFormat": "{{container}}"
+              }
+            ]
+          }
+        ]
+      }

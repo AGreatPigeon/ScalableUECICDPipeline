@@ -1,0 +1,16 @@
+{{- if .Values.observability.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "unreal-app.fullname" . }}
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "unreal-app.name" . }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+{{- end }}

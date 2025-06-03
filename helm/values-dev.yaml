@@ -1,0 +1,59 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/your-org/unreal-devops
+  tag: dev
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "250m"
+    memory: "256Mi"
+
+service:
+  type: ClusterIP
+  port: 80
+
+env:
+  LOG_LEVEL: "debug"
+
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "80"
+
+grafana:
+  dashboard:
+    enabled: true
+    folder: "Dev"
+    annotations:
+      team: "dev"
+    json: |
+      {
+        "title": "Unreal DevOps Dashboard",
+        "panels": [
+          {
+            "type": "graph",
+            "title": "CPU Usage",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{image=~\"ghcr.io/your-org/unreal-devops:.*\"}[5m])",
+                "legendFormat": "{{container}}"
+              }
+            ]
+          },
+          {
+            "type": "graph",
+            "title": "Memory Usage",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{image=~\"ghcr.io/your-org/unreal-devops:.*\"}",
+                "legendFormat": "{{container}}"
+              }
+            ]
+          }
+        ]
+      }

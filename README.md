@@ -1,7 +1,8 @@
 # ScalableUECICDPipeline
+
 Scalable Unreal Engine Game Backend CI/CD Pipeline
 
-# Unreal Engine Backend Server
+## Unreal Engine Backend Server
 
 A scalable, containerised backend for an Unreal Engine project designed for online/multiplayer experiences. Built with DevOps best practices in mind — GitHub Actions CI/CD, Docker, Kubernetes, and GitOps-friendly.
 
@@ -16,6 +17,7 @@ A scalable, containerised backend for an Unreal Engine project designed for onli
 ---
 
 ## 📁 Project Structure
+
 /root
 ├── .github/workflows/ci-cd.yml # GitHub Actions pipeline
 ├── Dockerfile # Docker build for Unreal Engine server
@@ -53,6 +55,7 @@ docker run -it --rm -p 7777:7777/udp mygame-server
 ## GitHub Actions CI/CD
 
 A GitHub Actions workflow is included to:
+
 - Build and containerise the Unreal Engine server
 - Push the image to GitHub Container Registry (GHCR)
 - (Optional) Deploy to Kubernetes using ArgoCD or kubectl
@@ -99,4 +102,5 @@ docker push ghcr.io/YOUR-USERNAME/your-repo:latest
 - Testing framework integration
 
 ## License
+
 MIT License
