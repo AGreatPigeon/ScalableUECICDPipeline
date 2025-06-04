@@ -3,49 +3,61 @@ name: Deploy to Kubernetes via Helm
 on:
   push:
     branches:
-      - main
+      - develop
+      - sit
+      - main # prod
     paths:
       - 'helm/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
-
+env:
+  REGISTRY: ghcr.io/your-org-name
+  IMAGE_NAME: scalable-ue5-pipeline
 jobs:
-  deploy:
+  deploy-dev:
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        environment: [dev, sit, prod]
-
-    env:
-      HELM_RELEASE_NAME: unreal-devops-app
-      KUBE_CONFIG_DATA: ${{ secrets[format('KUBE_CONFIG_{0}', matrix.environment)] }}
-      NAMESPACE: ${{ matrix.environment }}
-      VALUES_FILE: helm/values-${{ matrix.environment }}.yaml
-
+    name: Deploy to Dev Environment
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: '3.12.0'
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Decode and write kubeconfig
+      - uses: actions/checkout@v4
+      - name: Set up Kubernetes context
         run: |
-          echo "${KUBE_CONFIG_DATA}" | base64 -d > $HOME/.kube/config
-
-      - name: Helm dependency update
-        run: helm dependency update helm/
-
-      - name: Helm upgrade or install
+          kubectl config use-context dev-cluster
+      - name: Deploy using Helm
         run: |
-          helm upgrade --install $HELM_RELEASE_NAME ./helm \
-            --namespace $NAMESPACE \
-            --create-namespace \
-            -f $VALUES_FILE
+          helm upgrade --install ue5-dev ./helm \
+            -f ./helm/values-dev.yaml \
+            --namespace ue5-dev \
+            --create-namespace
+
+  deploy-sit:
+    if: github.ref == 'refs/heads/sit'
+    runs-on: ubuntu-latest
+    name: Deploy to SIT Environment
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Kubernetes context
+        run: |
+          kubectl config use-context sit-cluster
+      - name: Deploy using Helm
+        run: |
+          helm upgrade --install ue5-sit ./helm \
+            -f ./helm/values-sit.yaml \
+            --namespace ue5-sit \
+            --create-namespace
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    name: Deploy to Production Environment
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Kubernetes context
+        run: |
+          kubectl config use-context prod-cluster
+      - name: Deploy using Helm
+        run: |
+          helm upgrade --install ue5-prod ./helm \
+            -f ./helm/values-prod.yaml \
+            --namespace ue5-prod \
+            --create-namespace
