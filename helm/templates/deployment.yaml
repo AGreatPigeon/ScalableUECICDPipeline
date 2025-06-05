@@ -1,36 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "unreal-devops.fullname" . }}
+  name: {{ include "scalable-ue5-pipeline.fullname" . }}
   labels:
-    app: {{ include "unreal-devops.name" . }}
-    chart: {{ include "unreal-devops.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    app: {{ include "scalable-ue5-pipeline.name" . }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "unreal-devops.name" . }}
-      release: {{ .Release.Name }}
+      app: {{ include "scalable-ue5-pipeline.name" . }}
   template:
     metadata:
-      annotations:
-        {{- toYaml .Values.annotations | nindent 8 }}
       labels:
-        app: {{ include "unreal-devops.name" . }}
-        release: {{ .Release.Name }}
+        app: {{ include "scalable-ue5-pipeline.name" . }}
     spec:
       containers:
-        - name: {{ .Chart.Name }}
+        - name: ue5-service
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.port }}
           env:
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: "{{ $value }}"
-            {{- end }}
+            - name: LOG_LEVEL
+              value: "{{ .Values.env.LOG_LEVEL }}"
+            - name: UE_MODE
+              value: "{{ .Values.env.UE_MODE }}"
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}

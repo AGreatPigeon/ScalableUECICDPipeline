@@ -14,6 +14,56 @@ env:
   REGISTRY: ghcr.io/your-org-name
   IMAGE_NAME: scalable-ue5-pipeline
 jobs:
+  
+  # Step 1: Build
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t ue5-build-image .
+
+  # Step 2: Automated Tests (Functional/Unit)
+  test-functional:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Blueprint/Functional Tests
+        run: |
+          docker run --rm ue5-build-image ./run-tests.sh
+
+      - name: Upload Functional Test Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: functional-test-results
+          path: /app/Saved/Automation
+
+  test-multiplayer:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Gauntlet Multiplayer Tests
+        run: |
+          docker run --rm ue5-build-image \
+            ./Engine/Build/BatchFiles/RunUAT.sh \
+            RunUnrealTests -project=/app/MyGame.uproject \
+            -test=SimpleJoinTest -clientcount=1 -servercount=1
+
+      - name: Upload Gauntlet Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: gauntlet-results
+          path: /app/Saved/Logs
+
   deploy-dev:
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest

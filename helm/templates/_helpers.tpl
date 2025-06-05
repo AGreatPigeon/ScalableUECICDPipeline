@@ -1,7 +1,7 @@
-{{- define "unreal-app.name" -}}
+{{- define "scalable-ue5-pipeline.name" -}}
 {{ .Chart.Name }}
 {{- end }}
 
-{{- define "unreal-app.fullname" -}}
+{{- define "scalable-ue5-pipeline.fullname" -}}
 {{ .Release.Name }}-{{ .Chart.Name }}
 {{- end }}

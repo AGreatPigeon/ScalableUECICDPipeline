@@ -1,106 +1,131 @@
 # ScalableUECICDPipeline
 
-Scalable Unreal Engine Game Backend CI/CD Pipeline
+> CI/CD pipeline template for Unreal Engine 5 projects using GitHub Actions, Kubernetes, and Helm.
 
-## Unreal Engine Backend Server
-
-A scalable, containerised backend for an Unreal Engine project designed for online/multiplayer experiences. Built with DevOps best practices in mind — GitHub Actions CI/CD, Docker, Kubernetes, and GitOps-friendly.
-
-## Features
-
-- 🔁 CI/CD pipeline with GitHub Actions
-- 🐳 Dockerised Unreal Engine dedicated server
-- ☸️ Kubernetes deployment-ready
-- 🔐 Supports GitHub Container Registry (GHCR)
-- 🧠 Built with Infrastructure as Code and GitOps in mind
+This project aims to simplify the build, packaging, and deployment of Unreal Engine 5 projects in scalable environments using containerised infrastructure.
 
 ---
 
-## 📁 Project Structure
+## 🚀 Features
 
-/root
-├── .github/workflows/ci-cd.yml # GitHub Actions pipeline
-├── Dockerfile # Docker build for Unreal Engine server
-├── k8s/
-│ └── deployment.yml # Kubernetes deployment
-├── MyGame.uproject # Unreal Engine project file
-└── Source/ # Game source code
-
+- 🔁 GitHub Actions-based CI/CD
+- 🐳 Containerised Unreal Engine build pipeline
+- ☸️ Kubernetes-native deployment
+- 🎛️ Helm charts with separate config for dev / sit / prod
+- 🔄 GitOps ready (Flux / ArgoCD compatible)
+- 📊 Optional observability with Prometheus & Grafana
 
 ---
 
-## ⚙️ Prerequisites
+## 🗂 Project Structure
 
-- [Unreal Engine 5.x](https://www.unrealengine.com/)
-- [Docker](https://www.docker.com/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- Optional: [ArgoCD](https://argo-cd.readthedocs.io/en/stable/) for GitOps
+├── .github/workflows/
+│ └── deploy.yml
+├── helm/
+│ ├── Chart.yaml
+│ ├── templates/
+│ │ ├── deployment.yaml
+│ │ ├── ingress.yaml
+│ │ ├── service.yaml
+│ │ └── _helpers.tpl
+│ ├── values-dev.yaml
+│ ├── values-sit.yaml
+│ └── values-prod.yaml
+├── Dockerfile
+└── README.md
 
 ---
 
-## 🧪 Local Development & Testing
+## 🖥️ Local Development
 
-### Build Docker Image Locally
+To run the UE5 container locally:
 
-```bash
-docker build -t mygame-server .
-```
-
-### Run Locally
+1. **Build the Docker image:**
 
 ```bash
-docker run -it --rm -p 7777:7777/udp mygame-server
+docker build -t ue5-local-pipeline .
+
+docker run -it --rm \
+  -e LOG_LEVEL=debug \
+  -e UE_MODE=development \
+  -p 8080:8080 \
+  ue5-local-pipeline
+
+curl http://localhost:8080
 ```
 
-## GitHub Actions CI/CD
+🔄 CI/CD Overview
 
-A GitHub Actions workflow is included to:
+GitHub Actions is configured to deploy to Kubernetes based on branch:
 
-- Build and containerise the Unreal Engine server
-- Push the image to GitHub Container Registry (GHCR)
-- (Optional) Deploy to Kubernetes using ArgoCD or kubectl
+dev - Development - helm upgrade --install with values-dev.yaml
+sit - SIT/UAT - helm upgrade --install with values-sit.yaml
+main - Production - helm upgrade --install with values-prod.yaml
 
-See .github/workflows/ci-cd.yml for details.
 
-## Kubernetes Deployment
+☸️ Kubernetes Deployment via Helm
 
-### To deploy to Kubernetes:
+To deploy manually (e.g., for dev):
 
 ```bash
-kubectl apply -f k8s/deployment.yml
+helm upgrade --install ue5-dev ./helm \
+  -f ./helm/values-dev.yaml \
+  --namespace ue5-dev \
+  --create-namespace
 ```
 
-### To verify:
+To rollback:
 
 ```bash
-kubectl get pods
-kubectl get svc
+helm rollback ue5-dev 1
 ```
 
-## Observability & Monitoring (Planned)
+🔁 GitOps Integration
 
-- Grafana dashboards for CPU/RAM/net usage
-- Prometheus metrics scraping
-- Optional Sentry integration for crash reporting
+This project is GitOps-ready. You can define an ArgoCD Application like so:
 
-## Container Registry (GHCR)
-
-To push manually:
-
-```bash
-docker tag mygame-server ghcr.io/YOUR-USERNAME/your-repo:latest
-echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
-docker push ghcr.io/YOUR-USERNAME/your-repo:latest
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ue5-dev
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AGreatPigeon/ScalableUECICDPipeline.git
+    path: helm
+    targetRevision: dev
+    helm:
+      valueFiles:
+        - values-dev.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ue5-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
 ```
 
-## Roadmap / Ideas
+Similar manifests can be created for sit and prod.
 
-- Helm chart for easier deployment
-- Game state syncing backend (using Redis or PostgreSQL)
-- NAT traversal & matchmaking service
-- ArgoCD GitOps support
-- Testing framework integration
+📈 Observability (Optional)
 
-## License
+Prometheus and Grafana support can be toggled in the values.yaml files:
 
-MIT License
+```yaml
+observability:
+  enabled: true
+  prometheus: true
+  grafana: true
+```
+
+📋 Roadmap
+
+- Package build artifacts from UE5 into persistent volume
+- Publish to artifact repo (e.g., GitHub Releases or S3)
+- Slack / Discord notifications
+- Cloud-native asset delivery pipeline (CDN)
+
+📄 License
+MIT License – see LICENSE file for details.

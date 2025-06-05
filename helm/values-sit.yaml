@@ -1,59 +1,36 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/your-org/unreal-devops
+  repository: ghcr.io/your-org-name/scalable-ue5-pipeline
   tag: sit
   pullPolicy: Always
 
+env:
+  LOG_LEVEL: info
+  UE_MODE: staging
+
 resources:
-  requests:
-    cpu: "250m"
-    memory: "256Mi"
   limits:
-    cpu: "500m"
-    memory: "512Mi"
+    cpu: "1500m"
+    memory: "2048Mi"
+  requests:
+    cpu: "750m"
+    memory: "1024Mi"
 
 service:
   type: ClusterIP
-  port: 80
+  port: 8080
 
-env:
-  LOG_LEVEL: "info"
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: sit.ue5.example.com
+      paths:
+        - path: /
+          pathType: Prefix
 
-annotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/path: "/metrics"
-  prometheus.io/port: "80"
-
-grafana:
-  dashboard:
-    enabled: true
-    folder: "SIT"
-    annotations:
-      team: "qa"
-    json: |
-      {
-        "title": "Unreal DevOps SIT Dashboard",
-        "panels": [
-          {
-            "type": "graph",
-            "title": "CPU Usage",
-            "targets": [
-              {
-                "expr": "rate(container_cpu_usage_seconds_total{image=~\"ghcr.io/your-org/unreal-devops:.*\"}[5m])",
-                "legendFormat": "{{container}}"
-              }
-            ]
-          },
-          {
-            "type": "graph",
-            "title": "Memory Usage",
-            "targets": [
-              {
-                "expr": "container_memory_usage_bytes{image=~\"ghcr.io/your-org/unreal-devops:.*\"}",
-                "legendFormat": "{{container}}"
-              }
-            ]
-          }
-        ]
-      }
+observability:
+  enabled: true
+  prometheus: true
+  grafana: true

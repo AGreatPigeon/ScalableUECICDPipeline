@@ -1,59 +1,36 @@
 replicaCount: 3
 
 image:
-  repository: ghcr.io/your-org/unreal-devops
-  tag: prod
-  pullPolicy: Always
+  repository: ghcr.io/your-org-name/scalable-ue5-pipeline
+  tag: latest
+  pullPolicy: IfNotPresent
+
+env:
+  LOG_LEVEL: warn
+  UE_MODE: production
 
 resources:
-  requests:
-    cpu: "500m"
-    memory: "512Mi"
   limits:
+    cpu: "2000m"
+    memory: "4096Mi"
+  requests:
     cpu: "1000m"
-    memory: "1024Mi"
+    memory: "2048Mi"
 
 service:
   type: LoadBalancer
   port: 80
 
-env:
-  LOG_LEVEL: "warn"
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: ue5.example.com
+      paths:
+        - path: /
+          pathType: Prefix
 
-annotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/path: "/metrics"
-  prometheus.io/port: "80"
-
-grafana:
-  dashboard:
-    enabled: true
-    folder: "Production"
-    annotations:
-      team: "ops"
-    json: |
-      {
-        "title": "Unreal DevOps Production Dashboard",
-        "panels": [
-          {
-            "type": "graph",
-            "title": "CPU Usage",
-            "targets": [
-              {
-                "expr": "rate(container_cpu_usage_seconds_total{image=~\"ghcr.io/your-org/unreal-devops:.*\"}[5m])",
-                "legendFormat": "{{container}}"
-              }
-            ]
-          },
-          {
-            "type": "graph",
-            "title": "Memory Usage",
-            "targets": [
-              {
-                "expr": "container_memory_usage_bytes{image=~\"ghcr.io/your-org/unreal-devops:.*\"}",
-                "legendFormat": "{{container}}"
-              }
-            ]
-          }
-        ]
-      }
+observability:
+  enabled: true
+  prometheus: true
+  grafana: true
