@@ -14,7 +14,7 @@ env:
   REGISTRY: ghcr.io/your-org-name
   IMAGE_NAME: scalable-ue5-pipeline
 jobs:
-  
+
   # Step 1: Build
   build:
     runs-on: ubuntu-latest
@@ -27,6 +27,16 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t ue5-build-image .
+      
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+          "text": "🚨 *Unreal Engine CI/CD Pipeline* failed on job `${{ github.job }}` in `${{ github.workflow }}`.\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+          }' $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # Step 2: Automated Tests (Functional/Unit)
   test-functional:
@@ -44,6 +54,15 @@ jobs:
         with:
           name: functional-test-results
           path: /app/Saved/Automation
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+          "text": "🚨 *Unreal Engine CI/CD Pipeline* failed on job `${{ github.job }}` in `${{ github.workflow }}`.\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+          }' $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   test-multiplayer:
     needs: build
@@ -63,9 +82,21 @@ jobs:
         with:
           name: gauntlet-results
           path: /app/Saved/Logs
+      
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+          "text": "🚨 *Unreal Engine CI/CD Pipeline* failed on job `${{ github.job }}` in `${{ github.workflow }}`.\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+          }' $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
+   # Step 4: Deploy to Dev (only if tests pass)
   deploy-dev:
     if: github.ref == 'refs/heads/develop'
+    needs: [test-functional, test-multiplayer]
     runs-on: ubuntu-latest
     name: Deploy to Dev Environment
     steps:
@@ -80,8 +111,10 @@ jobs:
             --namespace ue5-dev \
             --create-namespace
 
+  # Step 5: Deploy to SIT
   deploy-sit:
     if: github.ref == 'refs/heads/sit'
+    needs: [test-functional, test-multiplayer]
     runs-on: ubuntu-latest
     name: Deploy to SIT Environment
     steps:
@@ -96,8 +129,10 @@ jobs:
             --namespace ue5-sit \
             --create-namespace
 
+  # Step 6: Deploy to Production
   deploy-prod:
     if: github.ref == 'refs/heads/main'
+    needs: [test-functional, test-multiplayer]
     runs-on: ubuntu-latest
     name: Deploy to Production Environment
     steps:
@@ -111,3 +146,18 @@ jobs:
             -f ./helm/values-prod.yaml \
             --namespace ue5-prod \
             --create-namespace
+   
+  # Step 7: Notify Slack on failure deployment
+  notify-failure:
+    needs: [build, test-functional, test-multiplayer, deploy-dev, deploy-sit, deploy-prod]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack of CI/CD failure
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "text": "🚨 *CI/CD Failure* on `${{ github.ref_name }}` branch. Check the run: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+          }' $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
